@@ -32,15 +32,19 @@ namespace DotnetGeminiSDK.Model.Request
 
     public class GenerationConfig
     {
-        [JsonProperty("stopSequences")] public List<string> StopSequences { get; set; }
+        [JsonProperty("stopSequences", NullValueHandling = NullValueHandling.Ignore)] public List<string>? StopSequences { get; set; }
 
-        [JsonProperty("temperature")] public double Temperature { get; set; }
+        [JsonProperty("temperature", NullValueHandling = NullValueHandling.Ignore)] public double ?Temperature { get; set; }
 
-        [JsonProperty("maxOutputTokens")] public int MaxOutputTokens { get; set; }
+        [JsonProperty("maxOutputTokens", NullValueHandling = NullValueHandling.Ignore)] public int? MaxOutputTokens { get; set; }
 
-        [JsonProperty("topP")] public double TopP { get; set; }
+        [JsonProperty("response_mime_type", NullValueHandling = NullValueHandling.Ignore)] public string? ResponseMimeType { get; set; }
 
-        [JsonProperty("topK")] public int TopK { get; set; }
+        [JsonProperty("response_schema", NullValueHandling = NullValueHandling.Ignore)] public dynamic? ResponseSchema { get; set; }
+
+        [JsonProperty("topP", NullValueHandling = NullValueHandling.Ignore)] public double? TopP { get; set; }
+
+        [JsonProperty("topK", NullValueHandling = NullValueHandling.Ignore)] public int? TopK { get; set; }
     }
 
     public class SafetySetting

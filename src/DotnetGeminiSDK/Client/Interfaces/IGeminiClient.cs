@@ -59,7 +59,7 @@ namespace DotnetGeminiSDK.Client.Interfaces
             bool useSSE = false
         );
 
-        Task<GeminiMessageResponse?> ImagePrompt(string message, byte[] image, ImageMimeType imageMimeType);
+        Task<GeminiMessageResponse?> ImagePrompt(string message, byte[] image, ImageMimeType imageMimeType, GenerationConfig? generationConfig = null, string? imageBaseUrl = null );
 
         Task<GeminiMessageResponse?> ImagePrompt(string message, string base64Image, ImageMimeType imageMimeType);
         

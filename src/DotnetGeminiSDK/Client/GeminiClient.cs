@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using DotnetGeminiSDK.Client.Interfaces;
 using DotnetGeminiSDK.Config;
@@ -31,7 +32,7 @@ namespace DotnetGeminiSDK.Client
             _config = config;
             _apiRequester = new ApiRequester();
         }
-        
+
         /// <summary>
         /// Constructor to configure client using dependency injection
         /// </summary>
@@ -243,14 +244,38 @@ namespace DotnetGeminiSDK.Client
         /// <returns>Returns a GeminiMessageResponse with all the response fields from api</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<GeminiMessageResponse?> ImagePrompt(string message, byte[] image, ImageMimeType mimeType)
+        public async Task<GeminiMessageResponse?> ImagePrompt(string message, byte[] image, ImageMimeType mimeType, GenerationConfig? generationConfig = null, string? imageBaseUrl = null)
         {
             if (string.IsNullOrEmpty(message)) throw new ArgumentException("Message cannot be empty.");
             if (image.Length == 0) throw new ArgumentException("Image cannot be empty.");
 
             var mimeTypeString = GetMimeTypeString(mimeType);
-            var promptUrl = $"{_config.ImageBaseUrl}:generateContent?key={_config.ApiKey}";
-            var request = BuildImageGeminiRequest(message, Convert.ToBase64String(image), mimeTypeString);
+            var promptUrl = $"{imageBaseUrl ?? _config.ImageBaseUrl}:generateContent?key={_config.ApiKey}";
+            var request = BuildImageGeminiRequest(message, Convert.ToBase64String(image), mimeTypeString, generationConfig);
+
+            return await _apiRequester.PostAsync<GeminiMessageResponse>(promptUrl, request);
+        }
+
+        /// <summary>
+        /// Send a message and a image to be processed using Google Gemini API,
+        /// the method returns a GeminiMessageResponse with all the response fields from api
+        ///
+        /// REF: https://ai.google.dev/tutorials/rest_quickstart#text-and-image_input
+        /// </summary>
+        /// <param name="message">Message to be processed</param>
+        /// <param name="images">A list of images as array of bytes format</param>
+        /// <param name="mimeType">Mime type of the images</param>
+        /// <returns>Returns a GeminiMessageResponse with all the response fields from api</returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="Exception"></exception>
+        public async Task<GeminiMessageResponse?> ImagePrompt(string message, List<byte[]> images, ImageMimeType mimeType, GenerationConfig? generationConfig = null, string? imageBaseUrl = null)
+        {
+            if (string.IsNullOrEmpty(message)) throw new ArgumentException("Message cannot be empty.");
+            if (images.Count == 0) throw new ArgumentException("Images cannot be empty.");
+
+            var mimeTypeString = GetMimeTypeString(mimeType);
+            var promptUrl = $"{imageBaseUrl ?? _config.ImageBaseUrl}:generateContent?key={_config.ApiKey}";
+            var request = BuildImageGeminiRequest(message, images.Select(x => Convert.ToBase64String(x)).ToList(), mimeTypeString, generationConfig);
 
             return await _apiRequester.PostAsync<GeminiMessageResponse>(promptUrl, request);
         }
@@ -444,6 +469,60 @@ namespace DotnetGeminiSDK.Client
                                     }
                                 }
                             }
+                        }
+                    },
+                GenerationConfig = generationConfig,
+                SafetySetting = safetySetting
+            };
+        }
+
+        /// <summary>
+        /// Build a GeminiMessageRequest object to process image from a string message, base 64 and mimetype
+        /// </summary>
+        /// <param name="message">Message to be processed</param>
+        /// <param name="base64Image">Base64 image to process</param>
+        /// <param name="mimeType">Mime type of the image</param>
+        /// <param name="generationConfig">A optional generation config</param>
+        /// <param name="safetySetting">A optional safety setting</param>
+        /// <returns>A GeminiMessageRequest built to sending for api</returns>
+        private static GeminiMessageRequest BuildImageGeminiRequest(
+            string message,
+            List<string> base64Images,
+            string mimeType,
+            GenerationConfig? generationConfig = null,
+            SafetySetting? safetySetting = null)
+        {
+
+            var parts = new List<Part>
+            {
+                new Part
+                {
+                    Text = message,
+                },
+
+            };
+
+            foreach (var image in base64Images)
+            {
+                parts.Add(new Part
+                {
+                    InlineData = new InlineData
+                    {
+                        MimeType = mimeType,
+                        Data = image
+                    }
+                });
+            }
+
+
+            return new GeminiMessageRequest
+            {
+                Contents =
+                    new List<Content>
+                    {
+                        new Content
+                        {
+                          Parts = parts
                         }
                     },
                 GenerationConfig = generationConfig,
